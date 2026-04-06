@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#0d0a0f" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="난 널 버리지 않아" />
+<link rel="manifest" href="/manifest.json" />
+<link rel="apple-touch-icon" href="/icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600&family=Noto+Sans+KR:wght@400;500&display=swap" rel="stylesheet" />
+<title>난 널 버리지 않아</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d0a0f;
+  --surface: #16111c;
+  --surface2: #1e1728;
+  --border: rgba(255,200,220,0.07);
+  --border-h: rgba(255,200,220,0.16);
+  --text: #f5eef5;
+  --muted: #907a9a;
+  --pink: #e8648a;
+  --pink-dark: #b5395e;
+  --pink-glow: rgba(232,100,138,0.28);
+  --rose: #f7a8c0;
+  --serif: 'Noto Serif KR', serif;
+  --sans: 'Noto Sans KR', sans-serif;
+}
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  background-image: radial-gradient(ellipse 60% 28% at 50% 0%, rgba(174,60,100,0.13) 0%, transparent 70%);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.app { width: 100%; max-width: 420px; }
+
+.logo-wrap { text-align: center; margin-bottom: 2.25rem; }
+.logo-heart { font-size: 24px; display: block; margin-bottom: 7px; animation: heartbeat 2.4s ease-in-out infinite; }
+@keyframes heartbeat {
+  0%,100% { transform: scale(1); }
+  14%      { transform: scale(1.2); }
+  28%      { transform: scale(1); }
+  42%      { transform: scale(1.12); }
+  56%      { transform: scale(1); }
+}
+.logo-text { font-family: var(--serif); font-size: 15px; font-weight: 600; color: var(--rose); letter-spacing: 1px; }
+
+.screen { display: none; }
+.screen.active { display: block; }
+
+.card {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: 20px;
+  padding: 1.6rem;
+  margin-bottom: 0.9rem;
+}
+.card-title { font-family: var(--serif); font-size: 17px; font-weight: 600; margin-bottom: 0.4rem; line-height: 1.5; }
+.card-sub { font-size: 13px; color: var(--muted); line-height: 1.8; margin-bottom: 1.3rem; }
+
+input[type=text] {
+  width: 100%;
+  background: var(--surface2);
+  border: 0.5px solid var(--border);
+  border-radius: 12px;
+  padding: 11px 15px;
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+  margin-bottom: 10px;
+  font-family: var(--sans);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+input[type=text]:focus { border-color: rgba(232,100,138,0.45); box-shadow: 0 0 0 3px rgba(232,100,138,0.08); }
+input::placeholder { color: var(--muted); }
+
+.btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 0.5px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-family: var(--sans);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  margin-bottom: 8px;
+}
+.btn:hover { background: var(--surface2); border-color: var(--border-h); }
+.btn:disabled { opacity: 0.38; cursor: not-allowed; }
+.btn-pink { background: var(--pink); border-color: var(--pink); color: #fff; font-weight: 500; }
+.btn-pink:hover { background: var(--pink-dark); border-color: var(--pink-dark); }
+.btn-ghost { border-color: rgba(232,100,138,0.25); color: var(--rose); }
+.btn-ghost:hover { background: rgba(232,100,138,0.07); }
+
+.sep { display: flex; align-items: center; gap: 10px; margin: 1.25rem 0; color: var(--muted); font-size: 11px; }
+.sep::before, .sep::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+.code-box {
+  background: var(--surface2);
+  border-radius: 14px;
+  padding: 1.3rem;
+  text-align: center;
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: 12px;
+  border: 0.5px solid var(--border);
+  margin: 1rem 0 0.4rem;
+  cursor: pointer;
+  color: var(--rose);
+  font-family: var(--sans);
+  transition: border-color 0.2s;
+}
+.code-box:hover { border-color: rgba(232,100,138,0.3); }
+.code-hint { font-size: 11px; color: var(--muted); text-align: center; margin-bottom: 1rem; }
+
+.badge { display: inline-block; font-size: 11px; padding: 3px 10px; border-radius: 20px; margin-bottom: 1rem; font-weight: 500; letter-spacing: 0.4px; }
+.badge-wait { background: rgba(186,117,23,0.12); color: #ef9f27; border: 0.5px solid rgba(186,117,23,0.25); }
+.badge-love { background: rgba(232,100,138,0.12); color: var(--rose); border: 0.5px solid rgba(232,100,138,0.25); }
+.badge-ok   { background: rgba(99,153,34,0.12); color: #97c459; border: 0.5px solid rgba(99,153,34,0.25); }
+
+.status-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.dot-pink  { background: var(--pink); box-shadow: 0 0 7px var(--pink-glow); }
+.dot-gray  { background: #333; }
+.dot-green { background: #639922; box-shadow: 0 0 6px rgba(99,153,34,0.5); }
+
+/* ── HEART BUTTON ── */
+.heart-wrap { display: flex; flex-direction: column; align-items: center; margin: 1.25rem 0 0.75rem; }
+
+#big-red-btn {
+  width: 172px; height: 172px; border-radius: 50%;
+  background: var(--pink);
+  border: none; outline: none; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  transition: transform 0.12s, background 0.12s;
+  user-select: none; -webkit-user-select: none; touch-action: none;
+  animation: glow-pulse 2.6s ease-out infinite;
+  position: relative;
+}
+#big-red-btn::before {
+  content: ''; position: absolute; inset: -8px; border-radius: 50%;
+  border: 1px solid rgba(232,100,138,0.18);
+  animation: ring-expand 2.6s ease-out infinite;
+}
+@keyframes ring-expand {
+  0%   { transform: scale(1); opacity: 0.8; }
+  70%  { transform: scale(1.18); opacity: 0; }
+  100% { transform: scale(1.18); opacity: 0; }
+}
+#big-red-btn.pressing { background: var(--pink-dark); transform: scale(0.92); animation: none; }
+#big-red-btn.pressing::before { display: none; }
+@keyframes glow-pulse {
+  0%   { box-shadow: 0 0 0 0 var(--pink-glow); }
+  60%  { box-shadow: 0 0 0 24px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+#big-red-btn .bi { font-size: 42px; line-height: 1; }
+#big-red-btn .bl { font-size: 12px; color: rgba(255,255,255,0.82); font-weight: 500; letter-spacing: 0.3px; }
+
+.counter-wrap { text-align: center; margin-bottom: 0.75rem; }
+.counter { font-size: 46px; font-weight: 700; line-height: 1; color: var(--rose); font-family: var(--serif); }
+.counter-lbl { font-size: 12px; color: var(--muted); margin-top: 5px; }
+
+.log-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; }
+.log-box { background: var(--surface2); border-radius: 12px; padding: 0.75rem; max-height: 180px; overflow-y: auto; border: 0.5px solid var(--border); }
+.log-item { font-size: 12px; color: var(--muted); padding: 5px 0; border-bottom: 0.5px solid var(--border); display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.log-item:last-child { border-bottom: none; }
+.log-item .lm { color: var(--text); }
+.log-empty { font-size: 12px; color: var(--muted); text-align: center; padding: 0.6rem 0; }
+
+.notice { background: var(--surface2); border-radius: 12px; padding: 1rem 1.1rem; margin-bottom: 1rem; font-size: 13px; color: var(--muted); line-height: 2.1; border: 0.5px solid var(--border); }
+
+#toast {
+  position: fixed; top: 1rem; left: 50%; transform: translateX(-50%);
+  background: var(--surface);
+  border: 0.5px solid rgba(232,100,138,0.25);
+  border-left: 3px solid var(--pink);
+  border-radius: 14px;
+  padding: 0.9rem 1.2rem;
+  max-width: 360px; width: calc(100% - 2rem);
+  display: none; z-index: 999;
+  animation: slideIn 0.25s ease;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+#toast .tf { font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+#toast .tm { font-size: 15px; font-weight: 500; }
+
+.err { font-size: 12px; color: var(--pink); margin: -4px 0 8px; }
+.mt  { margin-top: 0.75rem; }
+.push-status { font-size: 11px; text-align: center; margin-top: 0.6rem; padding: 5px 12px; border-radius: 10px; }
+.push-on  { background: rgba(99,153,34,0.1); color: #97c459; }
+.push-off { background: rgba(136,136,136,0.08); color: var(--muted); }
+.connected-pill { font-size: 11px; display: none; background: rgba(232,100,138,0.1); color: var(--rose); padding: 2px 10px; border-radius: 10px; margin-left: auto; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="logo-wrap">
+    <span class="logo-heart">🩷</span>
+    <span class="logo-text">난 널 버리지 않아</span>
+  </div>
+
+  <!-- SETUP -->
+  <div id="s-setup" class="screen active">
+    <div class="card">
+      <p class="card-title">내 짝꿍 등록하기</p>
+      <p class="card-sub">먼저 나를 소개해줘요. 방을 만들어 코드를 공유하거나, 짝꿍이 보낸 코드로 들어가요.</p>
+      <input type="text" id="my-name" placeholder="나의 이름이나 별명" maxlength="10" />
+      <div class="sep">내가 먼저 방 열기</div>
+      <button class="btn btn-pink" onclick="createRoom()">우리만의 공간 만들기</button>
+      <div class="sep">짝꿍 코드 받았어요</div>
+      <input type="text" id="join-code" placeholder="6자리 연결 코드"
+        maxlength="6" style="text-transform:uppercase;letter-spacing:6px;font-size:20px;text-align:center;" />
+      <p id="join-err" class="err" style="display:none;"></p>
+      <button class="btn btn-ghost" onclick="joinRoom()">짝꿍에게 달려가기</button>
+    </div>
+  </div>
+
+  <!-- WAITING -->
+  <div id="s-waiting" class="screen">
+    <div class="card">
+      <span class="badge badge-wait">짝꿍 기다리는 중</span>
+      <p class="card-title">이 코드를 짝꿍에게 보내줘요 💌</p>
+      <p class="card-sub">짝꿍이 코드를 입력하면 자동으로 연결돼요. 잠깐만 기다려줘요.</p>
+      <div class="code-box" id="room-code-display" onclick="copyCode()">------</div>
+      <p class="code-hint">탭하면 복사됩니다</p>
+      <div class="status-row"><div class="dot dot-pink"></div><span id="host-name-lbl">나</span></div>
+      <div class="status-row"><div class="dot dot-gray"></div><span>짝꿍 아직 안 왔어요...</span></div>
+    </div>
+    <button class="btn mt" onclick="leaveRoom()">그냥 나갈게요</button>
+  </div>
+
+  <!-- CONSENT -->
+  <div id="s-consent" class="screen">
+    <div class="card">
+      <span class="badge badge-love">거의 다 왔어요</span>
+      <p class="card-title" id="consent-title">짝꿍이 왔어요! 🩷</p>
+      <p class="card-sub">서로 약속을 확인하고, 버튼을 누를 때 짝꿍에게 갈 메시지를 써줘요.</p>
+      <div class="notice">
+        🩷 짝꿍이 버튼을 꾹 누르면 내 폰에 알림이 와요<br/>
+        📵 앱이 꺼져 있어도 알림을 받을 수 있어요<br/>
+        🤝 둘 다 확인해야 시작돼요
+      </div>
+      <div class="status-row">
+        <div class="dot dot-pink"></div><span>나의 확인: 완료</span>
+      </div>
+      <div class="status-row">
+        <div class="dot" id="partner-dot" style="background:#333;"></div>
+        <span id="partner-consent-lbl">짝꿍이 확인 중...</span>
+      </div>
+      <div class="sep">내 메시지 설정</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:8px;">내가 버튼 누를 때 짝꿍에게 보낼 말</p>
+      <input type="text" id="my-notif-text" placeholder="예: 나야 나, 보고싶어, 사랑해" maxlength="30" />
+      <button class="btn btn-pink" id="consent-btn" onclick="giveConsent()">약속하고 시작하기 🩷</button>
+      <p id="push-lbl" style="display:none;" class="push-status push-off"></p>
+    </div>
+    <button class="btn" onclick="leaveRoom()">연결 끊기</button>
+  </div>
+
+  <!-- MAIN -->
+  <div id="s-main" class="screen">
+    <div class="card" style="padding:1rem 1.5rem;">
+      <div class="status-row" style="margin-bottom:0;">
+        <div class="dot dot-pink"></div>
+        <span id="main-partner-name" style="color:var(--rose);font-weight:500;font-family:var(--serif);"></span>
+        <span>와 연결됨 🩷</span>
+        <span id="push-badge" class="connected-pill">푸시 ON</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <p style="font-size:13px;font-weight:500;margin-bottom:8px;">짝꿍에게 보낼 말</p>
+      <input type="text" id="send-text" maxlength="30" placeholder="보내고 싶은 말을 써요" />
+      <p style="font-size:11px;color:var(--muted);margin-top:-4px;">버튼 꾹 누르면 0.3초마다 짝꿍 폰에 알림이 가요</p>
+    </div>
+
+    <div class="card">
+      <div class="heart-wrap">
+        <button id="big-red-btn"
+          onmousedown="startPress()" onmouseup="stopPress()" onmouseleave="stopPress()"
+          ontouchstart="startPress(event)" ontouchend="stopPress()" ontouchcancel="stopPress()">
+          <div class="bi">🩷</div>
+          <div class="bl">꾹 눌러줘</div>
+        </button>
+      </div>
+      <div class="counter-wrap">
+        <div class="counter" id="send-count">0</div>
+        <div class="counter-lbl">사랑을 보낸 횟수</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="log-title">짝꿍이 보낸 알림</p>
+      <div class="log-box" id="recv-log">
+        <p class="log-empty">아직 아무것도 없어요 🤍</p>
+      </div>
+    </div>
+
+    <button class="btn mt" onclick="leaveRoom()">연결 끊기</button>
+  </div>
+
+</div>
+
+<div id="toast"><div class="tf" id="toast-from"></div><div class="tm" id="toast-msg"></div></div>
+
+<script>
+const PRESS_INTERVAL = 300;
+const POLL_INTERVAL  = 800;
+
+let S = { myName:'', partnerName:'', myRole:'', roomCode:'', myNotifText:'', sendCount:0, pushEnabled:false, subscription:null };
+let pressTimer=null, pollTimer=null, toastTimer=null, vapidKey=null, lastPulse=0, isSending=false;
+
+const $   = id => document.getElementById(id);
+const esc = s  => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+}
+function showErr(el, msg) { el.textContent=msg; el.style.display=msg?'block':'none'; }
+
+async function api(method, path, body) {
+  const opts = { method, headers:{'Content-Type':'application/json'} };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  return r.json();
+}
+
+async function getVapidKey() {
+  if (vapidKey) return vapidKey;
+  const d = await api('GET', '/api/vapid-public-key');
+  vapidKey = d.key; return vapidKey;
+}
+
+async function subscribePush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') return null;
+    const key = await getVapidKey();
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:urlB64(key) });
+    S.subscription = sub.toJSON(); S.pushEnabled = true;
+    return S.subscription;
+  } catch(e) { console.warn('Push 구독 실패:', e); return null; }
+}
+
+function urlB64(b64) {
+  const pad = '='.repeat((4-b64.length%4)%4);
+  const raw = atob((b64+pad).replace(/-/g,'+').replace(/_/g,'/'));
+  return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
+}
+
+async function createRoom() {
+  const name = $('my-name').value.trim();
+  if (!name) { alert('이름을 먼저 써줘요 🩷'); return; }
+  S.myName=name; S.myRole='host';
+  const d = await api('POST','/api/rooms/create',{hostName:name});
+  if (d.error) { alert(d.error); return; }
+  S.roomCode=d.code;
+  $('room-code-display').textContent=d.code;
+  $('host-name-lbl').textContent=`${name} (나)`;
+  showScreen('s-waiting');
+  startPolling();
+}
+
+async function joinRoom() {
+  const name=$('my-name').value.trim();
+  const code=$('join-code').value.trim().toUpperCase();
+  const errEl=$('join-err');
+  if (!name) { showErr(errEl,'이름을 먼저 써줘요 🩷'); return; }
+  if (code.length!==6) { showErr(errEl,'6자리 코드를 입력해줘요'); return; }
+  showErr(errEl,'');
+  const d = await api('POST','/api/rooms/join',{code,guestName:name});
+  if (d.error) { showErr(errEl,d.error); return; }
+  S.myName=name; S.myRole='guest'; S.roomCode=code; S.partnerName=d.hostName;
+  setupConsentScreen();
+  showScreen('s-consent');
+  startPolling();
+}
+
+async function copyCode() {
+  await navigator.clipboard.writeText(S.roomCode);
+  const el=$('room-code-display');
+  el.textContent='복사됐어요!';
+  setTimeout(()=>el.textContent=S.roomCode,1300);
+}
+
+async function leaveRoom() {
+  stopPolling(); stopPress();
+  if (S.roomCode) await api('DELETE',`/api/rooms/${S.roomCode}`);
+  S={myName:'',partnerName:'',myRole:'',roomCode:'',myNotifText:'',sendCount:0,pushEnabled:false,subscription:null};
+  vapidKey=null; lastPulse=0; isSending=false;
+  $('my-name').value=''; $('join-code').value='';
+  $('send-count').textContent='0';
+  $('recv-log').innerHTML='<p class="log-empty">아직 아무것도 없어요 🤍</p>';
+  showScreen('s-setup');
+}
+
+function setupConsentScreen() {
+  $('consent-title').textContent=`${S.partnerName}이(가) 왔어요! 🩷`;
+  $('partner-consent-lbl').textContent=`${S.partnerName} 확인 중...`;
+}
+
+async function giveConsent() {
+  const text=$('my-notif-text').value.trim();
+  if (!text) { alert('짝꿍에게 보낼 말을 써줘요 🩷'); return; }
+  S.myNotifText=text;
+  const btn=$('consent-btn');
+  btn.disabled=true; btn.textContent='잠깐만요...';
+  const lbl=$('push-lbl');
+  lbl.style.display='block';
+  lbl.textContent='알림 권한 확인 중...'; lbl.className='push-status push-off';
+  const sub = await subscribePush();
+  if (sub) { lbl.textContent='🩷 알림 ON — 앱이 꺼져 있어도 짝꿍 알림을 받을 수 있어요'; lbl.className='push-status push-on'; }
+  else     { lbl.textContent='🤍 앱이 열려 있을 때만 알림을 받을 수 있어요'; }
+  const d = await api('POST',`/api/rooms/${S.roomCode}/consent`,{role:S.myRole,notifText:text,subscription:S.subscription});
+  if (d.error) { alert(d.error); btn.disabled=false; btn.textContent='약속하고 시작하기 🩷'; return; }
+  btn.textContent='약속 완료 — 짝꿍 기다리는 중... 🩷';
+}
+
+function startPolling() { pollTimer=setInterval(pollRoom,POLL_INTERVAL); }
+function stopPolling()  { clearInterval(pollTimer); pollTimer=null; }
+
+async function pollRoom() {
+  const room = await api('GET',`/api/rooms/${S.roomCode}`);
+  if (!room||room.error||room.status==='closed') { leaveRoom(); return; }
+  const cur = document.querySelector('.screen.active').id;
+
+  if (cur==='s-waiting' && room.guest_name) {
+    S.partnerName=room.guest_name;
+    setupConsentScreen();
+    showScreen('s-consent');
+    return;
+  }
+  if (cur==='s-consent') {
+    const partnerConsent = S.myRole==='host' ? room.guest_consent : room.host_consent;
+    if (partnerConsent) {
+      $('partner-dot').className='dot dot-green';
+      $('partner-consent-lbl').textContent=`${S.partnerName} 약속 완료 🩷`;
+    }
+    if (room.status==='active') goToMain();
+    return;
+  }
+  if (cur==='s-main') {
+    const pulse = S.myRole==='host' ? (room.guest_notif_pulse||0) : (room.host_notif_pulse||0);
+    const text  = S.myRole==='host' ? room.guest_notif_text : room.host_notif_text;
+    const from  = S.myRole==='host' ? room.guest_name : room.host_name;
+    if (pulse > lastPulse) {
+      const diff = pulse - lastPulse;
+      for (let i=0; i<diff; i++) receiveNotif(text, from);
+      lastPulse = pulse;
+    }
+  }
+}
+
+function goToMain() {
+  stopPolling(); lastPulse=0;
+  $('main-partner-name').textContent=S.partnerName;
+  $('send-text').value=S.myNotifText;
+  if (S.pushEnabled) $('push-badge').style.display='inline';
+  showScreen('s-main');
+  startPolling();
+}
+
+function startPress(e) {
+  if (e) e.preventDefault();
+  $('big-red-btn').classList.add('pressing');
+  sendPush();
+  pressTimer = setInterval(() => { if (!isSending) sendPush(); }, PRESS_INTERVAL);
+}
+
+function stopPress() {
+  clearInterval(pressTimer); pressTimer=null;
+  $('big-red-btn').classList.remove('pressing');
+}
+
+async function sendPush() {
+  if (isSending) return;
+  isSending = true;
+  const text = $('send-text').value.trim() || S.myNotifText || '보고싶어';
+  const tag  = `push-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
+  try {
+    await api('POST', `/api/rooms/${S.roomCode}/push`, { senderRole:S.myRole, text, tag });
+    S.sendCount++;
+    $('send-count').textContent = S.sendCount;
+  } finally {
+    isSending = false;
+  }
+}
+
+function receiveNotif(msg, from) {
+  $('toast-from').textContent=`🩷 ${from}`;
+  $('toast-msg').textContent=msg;
+  const t=$('toast');
+  t.style.display='block';
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.style.display='none',2200);
+  const now=new Date();
+  const time=[now.getHours(),now.getMinutes(),now.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':');
+  const log=$('recv-log');
+  if (log.querySelector('.log-empty')) log.innerHTML='';
+  const item=document.createElement('div');
+  item.className='log-item';
+  item.innerHTML=`<span class="lm">🩷 ${esc(msg)}</span><span>${time}</span>`;
+  log.prepend(item);
+}
+</script>
+</body>
+</html>

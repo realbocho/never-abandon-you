@@ -1,0 +1,14 @@
+{
+  "name": "난 널 버리지 않아",
+  "short_name": "난 널 버리지 않아",
+  "description": "짝꿍에게 마음을 전하는 버튼",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f0f",
+  "theme_color": "#0f0f0f",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
