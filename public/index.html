@@ -393,6 +393,16 @@ async function subscribePush() {
     const key = await getVapidKey();
     const sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:urlB64(key) });
     S.subscription = sub.toJSON(); S.pushEnabled = true;
+
+    // SW → 앱으로 오는 postMessage 수신 (인앱 토스트 표시)
+    navigator.serviceWorker.addEventListener('message', event => {
+      if (event.data && event.data.type === 'PUSH_RECEIVED') {
+        const { body, title } = event.data;
+        const from = title.replace('이(가) 눌렀어요!', '').replace('이 눌렀어요!', '');
+        receiveNotif(body, from);
+      }
+    });
+
     return S.subscription;
   } catch(e) { console.warn('Push 구독 실패:', e); return null; }
 }
@@ -509,8 +519,16 @@ async function pollRoom() {
     const text  = S.myRole==='host' ? room.guest_notif_text : room.host_notif_text;
     const from  = S.myRole==='host' ? room.guest_name : room.host_name;
     if (pulse > lastPulse) {
-      const diff = pulse - lastPulse;
-      for (let i=0; i<diff; i++) receiveNotif(text, from);
+      // push가 없을 때(구독 미완료)만 폴링으로 인앱 토스트 표시
+      // push가 있으면 SW postMessage가 receiveNotif를 직접 호출함
+      if (!S.pushEnabled) {
+        const diff = pulse - lastPulse;
+        for (let i=0; i<diff; i++) receiveNotif(text, from);
+      } else {
+        // push ON이면 로그만 업데이트 (토스트는 SW가 처리)
+        const diff = pulse - lastPulse;
+        for (let i=0; i<diff; i++) addToLog(text);
+      }
       lastPulse = pulse;
     }
   }
@@ -551,6 +569,17 @@ async function sendPush() {
   }
 }
 
+function addToLog(msg) {
+  const now = new Date();
+  const time = [now.getHours(), now.getMinutes(), now.getSeconds()].map(n => String(n).padStart(2,'0')).join(':');
+  const log = $('recv-log');
+  if (log.querySelector('.log-empty')) log.innerHTML = '';
+  const item = document.createElement('div');
+  item.className = 'log-item';
+  item.innerHTML = `<span class="lm">🩷 ${esc(msg)}</span><span>${time}</span>`;
+  log.prepend(item);
+}
+
 function receiveNotif(msg, from) {
   const stack = $('notif-stack');
 
@@ -570,14 +599,7 @@ function receiveNotif(msg, from) {
   card.addEventListener('click', () => { clearTimeout(timer); dismissNotif(card); });
 
   // 로그에도 추가
-  const now = new Date();
-  const time = [now.getHours(), now.getMinutes(), now.getSeconds()].map(n => String(n).padStart(2,'0')).join(':');
-  const log = $('recv-log');
-  if (log.querySelector('.log-empty')) log.innerHTML = '';
-  const item = document.createElement('div');
-  item.className = 'log-item';
-  item.innerHTML = `<span class="lm">🩷 ${esc(msg)}</span><span>${time}</span>`;
-  log.prepend(item);
+  addToLog(msg);
 }
 
 function dismissNotif(card) {
