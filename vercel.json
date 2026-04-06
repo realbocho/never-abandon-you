@@ -1,6 +1,11 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/(.*)",     "destination": "/public/$1" }
+    { "source": "/api/vapid-public-key",    "destination": "/api/vapid-public-key" },
+    { "source": "/api/rooms/create",        "destination": "/api/rooms/create" },
+    { "source": "/api/rooms/join",          "destination": "/api/rooms/join" },
+    { "source": "/api/rooms/:code/consent", "destination": "/api/rooms/[code]/consent" },
+    { "source": "/api/rooms/:code/push",    "destination": "/api/rooms/[code]/push" },
+    { "source": "/api/rooms/:code",         "destination": "/api/rooms/[code]" },
+    { "source": "/(.*)",                    "destination": "/public/$1" }
   ]
 }
