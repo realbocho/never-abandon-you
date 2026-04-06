@@ -410,7 +410,7 @@ async function leaveRoom() {
   stopPolling(); stopPress();
   if (S.roomCode) await api('DELETE',`/api/rooms/${S.roomCode}`);
   S={myName:'',partnerName:'',myRole:'',roomCode:'',myNotifText:'',sendCount:0,pushEnabled:false,subscription:null};
-  vapidKey=null; lastPulse=0; isSending=false;
+  vapidKey=null; lastPulse=0; isSending=false; _pollErrCount=0;
   $('my-name').value=''; $('join-code').value='';
   $('send-count').textContent='0';
   $('recv-log').innerHTML='<p class="log-empty">아직 아무것도 없어요 🤍</p>';
@@ -442,9 +442,15 @@ async function giveConsent() {
 function startPolling() { pollTimer=setInterval(pollRoom,POLL_INTERVAL); }
 function stopPolling()  { clearInterval(pollTimer); pollTimer=null; }
 
+let _pollErrCount = 0;
+
 async function pollRoom() {
-  const room = await api('GET',`/api/rooms/${S.roomCode}`);
-  if (!room||room.error||room.status==='closed') { leaveRoom(); return; }
+  let room;
+  try { room = await api('GET',`/api/rooms/${S.roomCode}`); }
+  catch(e) { return; }
+  if (!room || room.error) { _pollErrCount++; if (_pollErrCount > 5) leaveRoom(); return; }
+  _pollErrCount = 0;
+  if (room.status === 'closed') { leaveRoom(); return; }
   const cur = document.querySelector('.screen.active').id;
 
   if (cur==='s-waiting' && room.guest_name) {
