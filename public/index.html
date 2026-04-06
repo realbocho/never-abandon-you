@@ -426,14 +426,17 @@ async function giveConsent() {
   const text=$('my-notif-text').value.trim();
   if (!text) { alert('짝꿍에게 보낼 말을 써줘요 🩷'); return; }
   S.myNotifText=text;
-  const btn=$('consent-btn');
-  btn.disabled=true; btn.textContent='잠깐만요...';
+
+  // ★ 브라우저 보안 정책: 권한 요청은 클릭 핸들러 최상단에서 즉시 실행해야 함
   const lbl=$('push-lbl');
   lbl.style.display='block';
   lbl.textContent='알림 권한 확인 중...'; lbl.className='push-status push-off';
   const sub = await subscribePush();
   if (sub) { lbl.textContent='🩷 알림 ON — 앱이 꺼져 있어도 짝꿍 알림을 받을 수 있어요'; lbl.className='push-status push-on'; }
   else     { lbl.textContent='🤍 앱이 열려 있을 때만 알림을 받을 수 있어요'; }
+
+  const btn=$('consent-btn');
+  btn.disabled=true; btn.textContent='잠깐만요...';
   const d = await api('POST',`/api/rooms/${S.roomCode}/consent`,{role:S.myRole,notifText:text,subscription:S.subscription});
   if (d.error) { alert(d.error); btn.disabled=false; btn.textContent='약속하고 시작하기 🩷'; return; }
   btn.textContent='약속 완료 — 짝꿍 기다리는 중... 🩷';
