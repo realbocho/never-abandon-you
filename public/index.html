@@ -461,11 +461,12 @@ async function pollRoom() {
   }
   if (cur==='s-consent') {
     const partnerConsent = S.myRole==='host' ? room.guest_consent : room.host_consent;
+    const myConsent      = S.myRole==='host' ? room.host_consent  : room.guest_consent;
     if (partnerConsent) {
       $('partner-dot').className='dot dot-green';
       $('partner-consent-lbl').textContent=`${S.partnerName} 약속 완료 🩷`;
     }
-    if (room.status==='active') goToMain();
+    if (room.status==='active' || (myConsent && partnerConsent)) goToMain();
     return;
   }
   if (cur==='s-main') {
