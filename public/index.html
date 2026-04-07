@@ -354,15 +354,46 @@ input::placeholder { color: var(--muted); }
 <div id="notif-stack"></div>
 <div id="toast"></div>
 
+<!-- 디버그 패널 (우측 하단) -->
+<div id="debug-panel" style="position:fixed;bottom:1rem;right:1rem;z-index:9999;font-family:monospace;">
+  <button onclick="toggleDbg()" style="background:#1e1728;border:1px solid #333;color:#907a9a;font-size:11px;padding:5px 10px;border-radius:8px;cursor:pointer;">🔧 로그</button>
+  <div id="debug-box" style="display:none;background:#0d0a0f;border:1px solid #333;border-radius:10px;padding:8px;margin-top:4px;max-height:200px;overflow-y:auto;width:300px;">
+    <div id="debug-log"></div>
+  </div>
+</div>
+
 <script>
 const PRESS_INTERVAL = 300;
 const POLL_INTERVAL  = 800;
 
 let S = { myName:'', partnerName:'', myRole:'', roomCode:'', myNotifText:'', sendCount:0, pushEnabled:false, subscription:null };
-let pressTimer=null, pollTimer=null, vapidKey=null, lastPulse=0, isSending=false;
+let pressTimer=null, pollTimer=null, vapidKey=null, lastPulse=0, isSending=false, _pollErrCount=0;
 
 const $   = id => document.getElementById(id);
 const esc = s  => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function dbg(msg, color) {
+  const el = $('debug-log');
+  if (!el) return;
+  const line = document.createElement('div');
+  line.style.cssText = `font-size:11px;padding:2px 0;color:${color||'#aaa'};border-bottom:1px solid #222;`;
+  const t = new Date().toLocaleTimeString();
+  line.textContent = `[${t}] ${msg}`;
+  el.prepend(line);
+  if (el.children.length > 30) el.lastChild.remove();
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data && event.data.type === 'PUSH_RECEIVED') {
+      dbg(`SW→앱 메시지: ${event.data.body}`, '#97c459');
+      const title = event.data.title || '';
+      const body  = event.data.body  || '';
+      const from  = title.replace(/이\(가\) 눌렀어요!$/, '').replace(/이 눌렀어요!$/, '') || S.partnerName;
+      receiveNotif(body, from);
+    }
+  });
+}
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -380,31 +411,44 @@ async function api(method, path, body) {
 async function getVapidKey() {
   if (vapidKey) return vapidKey;
   const d = await api('GET', '/api/vapid-public-key');
-  vapidKey = d.key; return vapidKey;
+  vapidKey = d.key;
+  dbg(`VAPID 키: ${vapidKey ? '있음' : '없음!'}`, vapidKey ? '#aaa' : '#e86');
+  return vapidKey;
 }
 
 async function subscribePush() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+  if (!('serviceWorker' in navigator)) { dbg('ServiceWorker 미지원', '#e86'); return null; }
+  if (!('PushManager' in window))       { dbg('PushManager 미지원', '#e86'); return null; }
   try {
+    dbg('SW 등록 중...');
     const reg = await navigator.serviceWorker.register('/sw.js');
     await navigator.serviceWorker.ready;
+    dbg('SW 준비 완료');
+
     const perm = await Notification.requestPermission();
+    dbg(`알림 권한: ${perm}`, perm === 'granted' ? '#97c459' : '#e86');
     if (perm !== 'granted') return null;
+
     const key = await getVapidKey();
-    const sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:urlB64(key) });
-    S.subscription = sub.toJSON(); S.pushEnabled = true;
+    if (!key) { dbg('VAPID 키 없음 — 서버 환경변수 확인!', '#e86'); return null; }
 
-    // SW → 앱으로 오는 postMessage 수신 (인앱 토스트 표시)
-    navigator.serviceWorker.addEventListener('message', event => {
-      if (event.data && event.data.type === 'PUSH_RECEIVED') {
-        const { body, title } = event.data;
-        const from = title.replace('이(가) 눌렀어요!', '').replace('이 눌렀어요!', '');
-        receiveNotif(body, from);
-      }
-    });
+    let sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      dbg('기존 구독 재사용', '#97c459');
+    } else {
+      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64(key) });
+      dbg('새 구독 생성됨', '#97c459');
+    }
 
+    S.subscription = sub.toJSON();
+    S.pushEnabled  = true;
+    dbg(`endpoint: ${S.subscription.endpoint.slice(-30)}`);
     return S.subscription;
-  } catch(e) { console.warn('Push 구독 실패:', e); return null; }
+  } catch(e) {
+    dbg(`구독 실패: ${e.message}`, '#e86');
+    console.error('Push 구독 실패:', e);
+    return null;
+  }
 }
 
 function urlB64(b64) {
@@ -469,25 +513,30 @@ async function giveConsent() {
   if (!text) { alert('짝꿍에게 보낼 말을 써줘요 🩷'); return; }
   S.myNotifText=text;
 
-  // ★ 브라우저 보안 정책: 권한 요청은 클릭 핸들러 최상단에서 즉시 실행해야 함
   const lbl=$('push-lbl');
   lbl.style.display='block';
   lbl.textContent='알림 권한 확인 중...'; lbl.className='push-status push-off';
+
   const sub = await subscribePush();
-  if (sub) { lbl.textContent='🩷 알림 ON — 앱이 꺼져 있어도 짝꿍 알림을 받을 수 있어요'; lbl.className='push-status push-on'; }
-  else     { lbl.textContent='🤍 앱이 열려 있을 때만 알림을 받을 수 있어요'; }
+  if (sub) {
+    lbl.textContent='🩷 알림 ON — 앱이 꺼져 있어도 알림을 받아요';
+    lbl.className='push-status push-on';
+  } else {
+    lbl.textContent='🤍 알림 OFF — 앱이 열려 있을 때만 알림이 와요';
+  }
 
   const btn=$('consent-btn');
   btn.disabled=true; btn.textContent='잠깐만요...';
-  const d = await api('POST',`/api/rooms/${S.roomCode}/consent`,{role:S.myRole,notifText:text,subscription:S.subscription});
+  const d = await api('POST',`/api/rooms/${S.roomCode}/consent`,{
+    role: S.myRole, notifText: text, subscription: S.subscription
+  });
   if (d.error) { alert(d.error); btn.disabled=false; btn.textContent='약속하고 시작하기 🩷'; return; }
+  dbg(`consent 저장됨, sub=${!!S.subscription}`, '#97c459');
   btn.textContent='약속 완료 — 짝꿍 기다리는 중... 🩷';
 }
 
 function startPolling() { pollTimer=setInterval(pollRoom,POLL_INTERVAL); }
 function stopPolling()  { clearInterval(pollTimer); pollTimer=null; }
-
-let _pollErrCount = 0;
 
 async function pollRoom() {
   let room;
@@ -519,14 +568,10 @@ async function pollRoom() {
     const text  = S.myRole==='host' ? room.guest_notif_text : room.host_notif_text;
     const from  = S.myRole==='host' ? room.guest_name : room.host_name;
     if (pulse > lastPulse) {
-      // push가 없을 때(구독 미완료)만 폴링으로 인앱 토스트 표시
-      // push가 있으면 SW postMessage가 receiveNotif를 직접 호출함
+      const diff = pulse - lastPulse;
       if (!S.pushEnabled) {
-        const diff = pulse - lastPulse;
         for (let i=0; i<diff; i++) receiveNotif(text, from);
       } else {
-        // push ON이면 로그만 업데이트 (토스트는 SW가 처리)
-        const diff = pulse - lastPulse;
         for (let i=0; i<diff; i++) addToLog(text);
       }
       lastPulse = pulse;
@@ -561,9 +606,18 @@ async function sendPush() {
   const text = $('send-text').value.trim() || S.myNotifText || '보고싶어';
   const tag  = `push-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
   try {
-    await api('POST', `/api/rooms/${S.roomCode}/push`, { senderRole:S.myRole, text, tag });
+    const result = await api('POST', `/api/rooms/${S.roomCode}/push`, { senderRole:S.myRole, text, tag });
     S.sendCount++;
     $('send-count').textContent = S.sendCount;
+    if (result.pushed === false) {
+      dbg('⚠ pushed:false — 짝꿍 subscription 없음. 재접속 필요', '#ef9f27');
+    } else if (result.error) {
+      dbg(`push 오류: ${result.error} / ${result.detail||''}`, '#e86');
+    } else {
+      dbg('push 전송 성공 ✓', '#97c459');
+    }
+  } catch(e) {
+    dbg(`sendPush 예외: ${e.message}`, '#e86');
   } finally {
     isSending = false;
   }
@@ -571,35 +625,34 @@ async function sendPush() {
 
 function addToLog(msg) {
   const now = new Date();
-  const time = [now.getHours(), now.getMinutes(), now.getSeconds()].map(n => String(n).padStart(2,'0')).join(':');
+  const time = [now.getHours(),now.getMinutes(),now.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':');
   const log = $('recv-log');
-  if (log.querySelector('.log-empty')) log.innerHTML = '';
+  if (log.querySelector('.log-empty')) log.innerHTML='';
   const item = document.createElement('div');
-  item.className = 'log-item';
-  item.innerHTML = `<span class="lm">🩷 ${esc(msg)}</span><span>${time}</span>`;
+  item.className='log-item';
+  item.innerHTML=`<span class="lm">🩷 ${esc(msg)}</span><span>${time}</span>`;
   log.prepend(item);
 }
 
 function receiveNotif(msg, from) {
   const stack = $('notif-stack');
-
-  // 카드 생성
-  const card = document.createElement('div');
+  const card  = document.createElement('div');
   card.className = 'notif-card';
-  card.innerHTML = `<div class="notif-from">🩷 ${esc(from)}</div><div class="notif-msg">${esc(msg)}</div>`;
+  card.innerHTML  = `<div class="notif-from">🩷 ${esc(from||'')}</div><div class="notif-msg">${esc(msg)}</div>`;
 
-  // 최대 4개 유지 — 오래된 것부터 제거
   const existing = stack.querySelectorAll('.notif-card:not(.removing)');
-  if (existing.length >= 4) dismissNotif(existing[existing.length - 1]);
-
+  if (existing.length >= 4) dismissNotif(existing[existing.length-1]);
   stack.prepend(card);
 
-  // 2.4초 후 자동 제거
   const timer = setTimeout(() => dismissNotif(card), 2400);
   card.addEventListener('click', () => { clearTimeout(timer); dismissNotif(card); });
 
-  // 로그에도 추가
   addToLog(msg);
+}
+
+function toggleDbg() {
+  const box = $('debug-box');
+  box.style.display = box.style.display === 'none' ? 'block' : 'none';
 }
 
 function dismissNotif(card) {
