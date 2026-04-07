@@ -173,7 +173,15 @@ input::placeholder { color: var(--muted); }
 #big-red-btn .bl { font-size: 12px; color: rgba(255,255,255,0.82); font-weight: 500; letter-spacing: 0.3px; }
 
 .counter-wrap { text-align: center; margin-bottom: 0.75rem; }
-.counter { font-size: 46px; font-weight: 700; line-height: 1; color: var(--rose); font-family: var(--serif); }
+.counter-wrap { position: relative; overflow: hidden; height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.counter { font-size: 46px; font-weight: 700; line-height: 1; color: var(--rose); font-family: var(--serif); display: block; }
+.counter.roll-up {
+  animation: rollUp 0.08s ease-out;
+}
+@keyframes rollUp {
+  0%   { transform: translateY(100%); opacity: 0; }
+  100% { transform: translateY(0);    opacity: 1; }
+}
 .counter-lbl { font-size: 12px; color: var(--muted); margin-top: 5px; }
 
 .log-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; }
@@ -321,7 +329,7 @@ input::placeholder { color: var(--muted); }
     <div class="card">
       <p style="font-size:13px;font-weight:500;margin-bottom:8px;">짝꿍에게 보낼 말</p>
       <input type="text" id="send-text" maxlength="30" placeholder="보내고 싶은 말을 써요" />
-      <p style="font-size:11px;color:var(--muted);margin-top:-4px;">버튼 꾹 누르면 0.3초마다 짝꿍 폰에 알림이 가요</p>
+      <p style="font-size:11px;color:var(--muted);margin-top:-4px;">버튼 꾹 누르면 0.1초마다 짝꿍 폰에 알림이 가요</p>
     </div>
 
     <div class="card">
@@ -335,8 +343,8 @@ input::placeholder { color: var(--muted); }
       </div>
       <div class="counter-wrap">
         <div class="counter" id="send-count">0</div>
-        <div class="counter-lbl">사랑을 보낸 횟수</div>
       </div>
+      <div style="text-align:center;"><div class="counter-lbl">사랑을 보낸 횟수</div></div>
     </div>
 
     <div class="card">
@@ -354,16 +362,15 @@ input::placeholder { color: var(--muted); }
 <div id="notif-stack"></div>
 <div id="toast"></div>
 
-<!-- 디버그 패널 (우측 하단) -->
+<!-- 디버그 패널 (오른쪽 하단, 탭하면 펼침) -->
 <div id="debug-panel" style="position:fixed;bottom:1rem;right:1rem;z-index:9999;font-family:monospace;">
   <button onclick="toggleDbg()" style="background:#1e1728;border:1px solid #333;color:#907a9a;font-size:11px;padding:5px 10px;border-radius:8px;cursor:pointer;">🔧 로그</button>
   <div id="debug-box" style="display:none;background:#0d0a0f;border:1px solid #333;border-radius:10px;padding:8px;margin-top:4px;max-height:200px;overflow-y:auto;width:300px;">
     <div id="debug-log"></div>
   </div>
 </div>
-
 <script>
-const PRESS_INTERVAL = 300;
+const PRESS_INTERVAL = 100;
 const POLL_INTERVAL  = 800;
 
 let S = { myName:'', partnerName:'', myRole:'', roomCode:'', myNotifText:'', sendCount:0, pushEnabled:false, subscription:null };
@@ -372,6 +379,7 @@ let pressTimer=null, pollTimer=null, vapidKey=null, lastPulse=0, isSending=false
 const $   = id => document.getElementById(id);
 const esc = s  => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
+// ── 디버그 로그 (앱 내 표시) ──────────────────────────────────
 function dbg(msg, color) {
   const el = $('debug-log');
   if (!el) return;
@@ -383,6 +391,7 @@ function dbg(msg, color) {
   if (el.children.length > 30) el.lastChild.remove();
 }
 
+// ── SW 메시지 수신 (앱 켜진 상태에서 인앱 토스트) ─────────────
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', event => {
     if (event.data && event.data.type === 'PUSH_RECEIVED') {
@@ -432,6 +441,7 @@ async function subscribePush() {
     const key = await getVapidKey();
     if (!key) { dbg('VAPID 키 없음 — 서버 환경변수 확인!', '#e86'); return null; }
 
+    // 기존 subscription 재사용 시도
     let sub = await reg.pushManager.getSubscription();
     if (sub) {
       dbg('기존 구독 재사용', '#97c459');
@@ -569,9 +579,11 @@ async function pollRoom() {
     const from  = S.myRole==='host' ? room.guest_name : room.host_name;
     if (pulse > lastPulse) {
       const diff = pulse - lastPulse;
+      // push OFF일 때만 폴링으로 토스트 표시 (push ON이면 SW가 처리)
       if (!S.pushEnabled) {
         for (let i=0; i<diff; i++) receiveNotif(text, from);
       } else {
+        // push ON: 로그만 업데이트 (시스템 알림 + 인앱 토스트는 SW postMessage가 처리)
         for (let i=0; i<diff; i++) addToLog(text);
       }
       lastPulse = pulse;
@@ -608,7 +620,7 @@ async function sendPush() {
   try {
     const result = await api('POST', `/api/rooms/${S.roomCode}/push`, { senderRole:S.myRole, text, tag });
     S.sendCount++;
-    $('send-count').textContent = S.sendCount;
+    animateCounter(S.sendCount);
     if (result.pushed === false) {
       dbg('⚠ pushed:false — 짝꿍 subscription 없음. 재접속 필요', '#ef9f27');
     } else if (result.error) {
@@ -648,6 +660,35 @@ function receiveNotif(msg, from) {
   card.addEventListener('click', () => { clearTimeout(timer); dismissNotif(card); });
 
   addToLog(msg);
+}
+
+function animateCounter(target) {
+  const el = $('send-count');
+  const prev = parseInt(el.textContent) || 0;
+  const diff = target - prev;
+  if (diff <= 0) { el.textContent = target; return; }
+
+  // 중간 숫자들을 빠르게 우다다 보여줌 (최대 5단계)
+  const steps = Math.min(diff, 5);
+  let i = 0;
+
+  function tick() {
+    if (i < steps - 1) {
+      const interim = prev + Math.round((i + 1) * diff / steps);
+      el.textContent = interim;
+      el.classList.remove('roll-up');
+      void el.offsetWidth; // reflow
+      el.classList.add('roll-up');
+      i++;
+      setTimeout(tick, 40);
+    } else {
+      el.textContent = target;
+      el.classList.remove('roll-up');
+      void el.offsetWidth;
+      el.classList.add('roll-up');
+    }
+  }
+  tick();
 }
 
 function toggleDbg() {
